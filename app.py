@@ -2,6 +2,7 @@ import streamlit as st
 import qrcode
 import re
 import yt_dlp
+import os
 from reportlab.lib.pagesizes import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet
@@ -94,7 +95,7 @@ def create_pdf_with_qr(video_title, url, qr_image):
     
     story.append(Spacer(1, 0.2 * inch))
     
-    # Save QR image temporarily
+    # Save QR image temporarily for ReportLab
     qr_temp_path = "temp_qr.png"
     qr_image.save(qr_temp_path)
     
@@ -112,16 +113,16 @@ def create_pdf_with_qr(video_title, url, qr_image):
     url_style.fontSize = 9
     story.append(Paragraph(url, url_style))
     
-    # Build PDF to BytesIO
-    pdf_buffer = BytesIO()
+    # Build PDF
     doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
     
     # Read the PDF file and return as bytes
     with open(pdf_filename, 'rb') as f:
         pdf_bytes = f.read()
     
-    import os
-    os.remove(pdf_filename)
+    # Clean up temporary files
+    if os.path.exists(pdf_filename):
+        os.remove(pdf_filename)
     if os.path.exists(qr_temp_path):
         os.remove(qr_temp_path)
     
@@ -167,11 +168,18 @@ if generate_button:
                     
                     st.success("✅ QR Code generated successfully!")
                     
+                    # --- FIX IMPLEMENTED HERE ---
+                    # Prepare image bytes for Streamlit preview AND download 
+                    qr_buffer = BytesIO()
+                    qr_image.save(qr_buffer, format="PNG")
+                    qr_png_bytes = qr_buffer.getvalue()
+                    
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         st.subheader("📊 QR Code Preview")
-                        st.image(qr_image, width=250, caption=f"QR Code for: {video_title}")
+                        # Pass the raw bytes instead of the PilImage object
+                        st.image(qr_png_bytes, width=250, caption=f"QR Code for: {video_title}")
                     
                     with col2:
                         st.subheader("📋 Video Info")
@@ -179,11 +187,6 @@ if generate_button:
                         st.write(f"**URL:** {url_input}")
                     
                     st.divider()
-                    
-                    # Prepare download data
-                    qr_buffer = BytesIO()
-                    qr_image.save(qr_buffer, format="PNG")
-                    qr_png_bytes = qr_buffer.getvalue()
                     
                     col1, col2 = st.columns(2)
                     with col1:
