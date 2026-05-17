@@ -64,7 +64,7 @@ def fetch_youtube_title(url):
 
 
 def create_pdf_with_qr(video_title, url, qr_image):
-    """Create a PDF with QR code."""
+    """Create a PDF with QR code, optimized for 4x6 single-page fit."""
     safe_title = create_safe_filename(video_title)
     pdf_filename = f"{safe_title}.pdf"
     
@@ -74,44 +74,54 @@ def create_pdf_with_qr(video_title, url, qr_image):
     doc = SimpleDocTemplate(
         pdf_filename,
         pagesize=(PAGE_WIDTH, PAGE_HEIGHT),
-        topMargin=0.5 * inch,
-        bottomMargin=0.5 * inch,
-        leftMargin=0.5 * inch,
-        rightMargin=0.5 * inch
+        topMargin=0.4 * inch,    # Reduced margin slightly
+        bottomMargin=0.4 * inch,
+        leftMargin=0.4 * inch,
+        rightMargin=0.4 * inch
     )
     
     styles = getSampleStyleSheet()
     story = []
     
+    # 1. Truncate the title to prevent excessive line wrapping
+    max_title_length = 50 
+    display_title = video_title[:max_title_length] + "..." if len(video_title) > max_title_length else video_title
+    
     title_style = styles['h2']
     title_style.alignment = TA_CENTER
     title_style.fontSize = 12
-    story.append(Paragraph(video_title, title_style))
+    title_style.leading = 14 # Tighter line spacing
+    story.append(Paragraph(display_title, title_style))
     
+    # 2. Make the subtitle more concise
     subtitle_style = styles['Normal']
     subtitle_style.alignment = TA_CENTER
     subtitle_style.fontSize = 10
-    story.append(Paragraph("Please scan the QR code to access the tutorial.", subtitle_style))
+    story.append(Paragraph("Scan to watch tutorial", subtitle_style))
     
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.15 * inch)) # Reduced spacer slightly
     
     # Save QR image temporarily for ReportLab
     qr_temp_path = "temp_qr.png"
     qr_image.save(qr_temp_path)
     
     qr_img_obj = Image(qr_temp_path)
-    qr_size_in_inches = 3
+    
+    # 3. Slightly reduce QR size (2.75 inches instead of 3) to guarantee fit
+    qr_size_in_inches = 2.75
     qr_img_obj.drawWidth = qr_size_in_inches * inch
     qr_img_obj.drawHeight = qr_size_in_inches * inch
     qr_img_obj.hAlign = 'CENTER'
     story.append(qr_img_obj)
     
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.15 * inch))
     
+    # Truncate the URL as well to keep it strictly on one line
+    display_url = url[:45] + "..." if len(url) > 45 else url
     url_style = styles['Normal']
     url_style.alignment = TA_CENTER
-    url_style.fontSize = 9
-    story.append(Paragraph(url, url_style))
+    url_style.fontSize = 8 # Slightly smaller text for URL
+    story.append(Paragraph(display_url, url_style))
     
     # Build PDF
     doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
@@ -127,7 +137,6 @@ def create_pdf_with_qr(video_title, url, qr_image):
         os.remove(qr_temp_path)
     
     return pdf_bytes, safe_title
-
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="QR Code Generator", layout="wide")
