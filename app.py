@@ -180,16 +180,16 @@ if generate_button:
                     
                     st.divider()
                     
+                    # Prepare download data
+                    qr_buffer = BytesIO()
+                    qr_image.save(qr_buffer, format="PNG")
+                    qr_png_bytes = qr_buffer.getvalue()
+                    
                     col1, col2 = st.columns(2)
                     with col1:
-                        # Convert PIL image to bytes for download
-                        qr_bytes = BytesIO()
-                        qr_image.save(qr_bytes, format="PNG")
-                        qr_bytes.seek(0)
-                        
                         st.download_button(
                             label="📥 Download QR Code (PNG)",
-                            data=qr_bytes.getvalue(),
+                            data=qr_png_bytes,
                             file_name=f"{safe_title}_qr.png",
                             mime="image/png"
                         )
